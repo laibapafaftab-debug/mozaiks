@@ -1,0 +1,64 @@
+import re
+from pathlib import Path
+import yaml
+class ComplianceAgent:
+
+    def __init__(self, pack_path: str):
+        self.pack_path = Path(pack_path)
+        self.pack_data = self._load_pack()
+
+    def _load_pack(self) -> dict:
+        """Loads and parses the YAML compliance pack rulebook."""
+        with open(self.pack_path, "r", encoding="utf-8") as f:
+            return yaml.safe_load(f)
+
+    def audit_project(self, project_root: str) -> dict:
+        """Audits the project files against compliance rules."""
+        root = Path(project_root)
+        report = {
+            "pack_id": self.pack_data["pack"]["id"],
+            "pack_name": self.pack_data["pack"]["name"],
+            "status": "PASSED",
+            "violations": [],
+        }
+
+        for control in self.pack_data.get("required_controls", []):
+            control_id = control["id"]
+            control_name = control["name"]
+
+            for rule in control.get("rules", []):
+                check_type = rule["check_type"]
+                target_val = rule["value"]
+
+                # Secret leak detection (Regex Prohibit Check)
+                if check_type == "regex_prohibit":
+                    for file_path in root.rglob("*.py"):
+                        if ".venv" in str(file_path) or "__pycache__" in str(
+                            file_path
+                        ):
+                            continue
+                        content = file_path.read_text(
+                            encoding="utf-8", errors="ignore"
+                        )
+                        if re.search(target_val, content):
+                            report["status"] = "FAILED"
+                            report["violations"].append(
+                                {
+                                    "control_id": control_id,
+                                    "control_name": control_name,
+                                    "file": str(
+                                        file_path.relative_to(project_root)
+                                    ),
+                                    "issue": f"Hardcoded secret pattern detected: {target_val}",
+                                }
+                            )
+
+        return report
+
+
+    if __name__ == "__main__":
+    # Test Run
+    agent = ComplianceAgent("../soc2.yaml")
+    results = agent.audit_project("..")
+    print("--- COMPLIANCE AUDIT REPORT ---")
+    print(yaml.dump(results, indent=2))

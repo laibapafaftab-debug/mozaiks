@@ -1,3 +1,14 @@
+import json
+from datetime import date, datetime
+
+_old_default = json.JSONEncoder.default
+
+def _json_default(self, obj):
+    if isinstance(obj, (date, datetime)):
+        return obj.isoformat()
+    return _old_default(self, obj)
+
+json.JSONEncoder.default = _json_default
 # ==============================================================================
 # FILE: mozaiksai/core/events/unified_event_dispatcher.py
 # DESCRIPTION: Centralized event dispatcher for all event types in mozaiksai

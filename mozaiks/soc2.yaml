@@ -1,0 +1,33 @@
+pack:
+  id: "soc2-type2"
+  name: "SOC 2 Type II Compliance Pack"
+  version: "1.0.0"
+  description: "Enforces audit logging, encryption standards, and access control policies for enterprise readiness."
+
+required_controls:
+  - id: "SEC-01"
+    name: "Audit Logging Middleware"
+    description: "All HTTP requests and state changes must emit structured JSON audit logs."
+    target_files:
+      - "factory_app/middleware/logging.py"
+    rules:
+      - check_type: "import_exists"
+        value: "structlog"
+      - check_type: "decorator_present"
+        value: "@audit_log"
+
+  - id: "SEC-02"
+    name: "Data Encryption at Rest"
+    description: "Database connectors must use TLS/SSL and encrypted parameters."
+    target_files:
+      - "infra/db/connector.py"
+    rules:
+      - check_type: "config_key_required"
+        value: "ssl_mode=require"
+
+  - id: "SEC-03"
+    name: "Secret Management"
+    description: "Hardcoded secrets or API keys are strictly prohibited."
+    rules:
+      - check_type: "regex_prohibit"
+        value: "(sk-[a-zA-Z0-9]{20,}|AKIA[0-9A-Z]{16})"
